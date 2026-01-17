@@ -192,7 +192,7 @@ public:
 };
 
 template <typename TBase, int TDefaultCapacity>
-class JoltQueryCollectorClosestMulti final : public TBase {
+class JoltQueryCollectorClosestMulti : public TBase {
 public:
 	typedef typename TBase::ResultType Hit;
 	typedef JPH::Array<Hit, JPH::STLLocalAllocator<Hit, TDefaultCapacity + 1>> HitArray;
