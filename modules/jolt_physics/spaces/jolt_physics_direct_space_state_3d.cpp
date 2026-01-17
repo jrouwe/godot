@@ -316,7 +316,36 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_collide(const JoltBody3D &p_bod
 	const Vector3 &base_offset = transform_com.origin;
 
 	const JoltMotionFilter3D motion_filter(p_body, p_excluded_bodies, p_excluded_objects);
-	JoltQueryCollectorClosestMulti<JPH::CollideShapeCollector, 32> collector(p_max_collisions);
+	using CollectorBase = JoltQueryCollectorClosestMulti<JPH::CollideShapeCollector, 32>;
+	struct Collector : public CollectorBase {
+		Collector(int p_max_hits, float p_margin, const Vector3 &p_motion) :
+				CollectorBase(p_max_hits), margin(p_margin), motion(p_motion) {
+		}
+
+		virtual void AddHit(const Hit &p_hit) override {
+			// Ignore hits that don't penetrate enough
+			const float penetration_depth = p_hit.mPenetrationDepth + margin;
+			if (penetration_depth <= 0.0f) {
+				return;
+			}
+
+			// Ignore hits that are not opposing movement
+			const Vector3 normal = to_godot(-p_hit.mPenetrationAxis.Normalized());
+			if (motion.length_squared() > 0) {
+				const Vector3 direction = motion.normalized();
+
+				if (direction.dot(normal) >= -CMP_EPSILON) {
+					return;
+				}
+			}
+
+			CollectorBase::AddHit(p_hit);
+		}
+
+		float margin;
+		const Vector3 motion;
+	};
+	Collector collector(p_max_collisions, p_margin, p_motion);
 	_collide_shape_kinematics(jolt_shape, JPH::Vec3::sOne(), to_jolt_r(transform_com), settings, to_jolt_r(base_offset), collector, motion_filter, motion_filter, motion_filter, motion_filter);
 
 	if (!collector.had_hit() || p_result == nullptr) {
@@ -330,19 +359,7 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_collide(const JoltBody3D &p_bod
 
 		const float penetration_depth = hit.mPenetrationDepth + p_margin;
 
-		if (penetration_depth <= 0.0f) {
-			continue;
-		}
-
 		const Vector3 normal = to_godot(-hit.mPenetrationAxis.Normalized());
-
-		if (p_motion.length_squared() > 0) {
-			const Vector3 direction = p_motion.normalized();
-
-			if (direction.dot(normal) >= -CMP_EPSILON) {
-				continue;
-			}
-		}
 
 		JPH::ContactPoints contact_points1;
 		JPH::ContactPoints contact_points2;
