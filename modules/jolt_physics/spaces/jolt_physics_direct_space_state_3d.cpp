@@ -55,7 +55,7 @@
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
-bool JoltPhysicsDirectSpaceState3D::_cast_motion_impl(const JPH::Shape &p_jolt_shape, const Transform3D &p_transform_com, const Vector3 &p_scale, const Vector3 &p_motion, bool p_use_edge_removal, bool p_ignore_overlaps, const JPH::CollideShapeSettings &p_settings, const JPH::BroadPhaseLayerFilter &p_broad_phase_layer_filter, const JPH::ObjectLayerFilter &p_object_layer_filter, const JPH::BodyFilter &p_body_filter, const JPH::ShapeFilter &p_shape_filter, real_t &r_closest_safe, real_t &r_closest_unsafe) const {
+bool JoltPhysicsDirectSpaceState3D::_cast_motion_impl(const JPH::Shape &p_jolt_shape, const Transform3D &p_transform_com, const Vector3 &p_scale, const Vector3 &p_motion, bool p_use_edge_removal, bool p_ignore_overlaps, bool p_ignore_along_movement, const JPH::CollideShapeSettings &p_settings, const JPH::BroadPhaseLayerFilter &p_broad_phase_layer_filter, const JPH::ObjectLayerFilter &p_object_layer_filter, const JPH::BodyFilter &p_body_filter, const JPH::ShapeFilter &p_shape_filter, real_t &r_closest_safe, real_t &r_closest_unsafe) const {
 	r_closest_safe = 1.0f;
 	r_closest_unsafe = 1.0f;
 
@@ -93,7 +93,28 @@ bool JoltPhysicsDirectSpaceState3D::_cast_motion_impl(const JPH::Shape &p_jolt_s
 
 		const JPH::TransformedShape other_shape = p_other_body.GetTransformedShape();
 
-		JoltQueryCollectorAny<JPH::CollideShapeCollector> collector;
+		using CollectorBase = JoltQueryCollectorAny<JPH::CollideShapeCollector>;
+		struct Collector : public CollectorBase {
+			Collector(bool p_ignore_along_movement, JPH::Vec3Arg p_motion) :
+				ignore_along_movement(p_ignore_along_movement), motion(p_motion.Normalized()) {
+			}
+
+			virtual void AddHit(const Hit& p_hit) override {
+				if (ignore_along_movement) {
+					// Ignore hits that are not opposing movement
+					const JPH::Vec3 normal = -p_hit.mPenetrationAxis.Normalized();
+					if (motion.Dot(normal) >= -CMP_EPSILON) {
+						return;
+					}
+				}
+
+				CollectorBase::AddHit(p_hit);
+			}
+
+			bool ignore_along_movement;
+			const JPH::Vec3 motion;
+		};
+		Collector collector(p_ignore_along_movement, motion_local);
 
 		if (p_use_edge_removal) {
 			JPH::CollideShapeSettings eier_settings = p_settings;
@@ -290,7 +311,7 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_cast(const JoltBody3D &p_body, 
 		real_t shape_safe_fraction = 1.0;
 		real_t shape_unsafe_fraction = 1.0;
 
-		collided |= _cast_motion_impl(*jolt_shape, transform_com, scale, p_motion, JoltProjectSettings::use_enhanced_internal_edge_removal_for_motion_queries, false, settings, motion_filter, motion_filter, motion_filter, motion_filter, shape_safe_fraction, shape_unsafe_fraction);
+		collided |= _cast_motion_impl(*jolt_shape, transform_com, scale, p_motion, JoltProjectSettings::use_enhanced_internal_edge_removal_for_motion_queries, false, true, settings, motion_filter, motion_filter, motion_filter, motion_filter, shape_safe_fraction, shape_unsafe_fraction);
 
 		r_safe_fraction = MIN(r_safe_fraction, shape_safe_fraction);
 		r_unsafe_fraction = MIN(r_unsafe_fraction, shape_unsafe_fraction);
@@ -662,7 +683,7 @@ bool JoltPhysicsDirectSpaceState3D::cast_motion(const ShapeParameters &p_paramet
 	settings.mMaxSeparationDistance = (float)p_parameters.margin;
 
 	const JoltQueryFilter3D query_filter(*this, p_parameters.collision_mask, p_parameters.collide_with_bodies, p_parameters.collide_with_areas, p_parameters.exclude);
-	_cast_motion_impl(*jolt_shape, transform_com, scale, p_parameters.motion, JoltProjectSettings::use_enhanced_internal_edge_removal_for_queries, true, settings, query_filter, query_filter, query_filter, JPH::ShapeFilter(), r_closest_safe, r_closest_unsafe);
+	_cast_motion_impl(*jolt_shape, transform_com, scale, p_parameters.motion, JoltProjectSettings::use_enhanced_internal_edge_removal_for_queries, true, false, settings, query_filter, query_filter, query_filter, JPH::ShapeFilter(), r_closest_safe, r_closest_unsafe);
 
 	return true;
 }

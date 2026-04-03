@@ -75,7 +75,7 @@ public:
 };
 
 template <typename TBase>
-class JoltQueryCollectorAny final : public TBase {
+class JoltQueryCollectorAny : public TBase {
 public:
 	typedef typename TBase::ResultType Hit;
 
