@@ -359,8 +359,6 @@ void JoltBody3D::_update_damp() {
 			total_angular_damp = angular_damp;
 		} break;
 	}
-
-	_motion_changed();
 }
 
 void JoltBody3D::_update_kinematic_transform() {
@@ -461,7 +459,6 @@ void JoltBody3D::_space_changed() {
 
 void JoltBody3D::_areas_changed() {
 	_update_damp();
-	wake_up();
 }
 
 void JoltBody3D::_joints_changed() {
