@@ -31,7 +31,7 @@
 #pragma once
 
 #include "core/os/mutex.h"
-#include "core/templates/hash_map.h"
+#include "core/templates/a_hash_map.h"
 #include "core/templates/hash_set.h"
 #include "core/templates/hashfuncs.h"
 #include "core/templates/local_vector.h"
@@ -103,7 +103,7 @@ class JoltContactListener3D final
 		}
 	};
 
-	HashSet<JPH::SubShapeIDPair, ShapePairHasher> area_overlaps;
+	AHashMap<JPH::SubShapeIDPair, uint8_t, ShapePairHasher> area_overlaps;
 
 	JoltSpace3D *space = nullptr;
 
@@ -138,8 +138,8 @@ class JoltContactListener3D final
 
 	bool _has_shape_shifted(const JoltShapedObject3D &p_object, const JPH::SubShapeID &p_sub_shape_id);
 
-	void _evaluate_area_overlap(const JoltArea3D &p_area, const JoltArea3D &p_other_area, const JPH::SubShapeIDPair &p_shape_pair);
-	void _evaluate_area_overlap(const JoltArea3D &p_area, const JoltBody3D &p_body, const JPH::SubShapeIDPair &p_shape_pair);
+	void _evaluate_area_overlap(const JoltArea3D &p_area, const JoltArea3D &p_other_area, const JPH::SubShapeIDPair &p_shape_pair, bool p_overlaps);
+	void _evaluate_area_overlap(const JoltArea3D &p_area, const JoltBody3D &p_body, const JPH::SubShapeIDPair &p_shape_pair, bool p_overlaps);
 	void _evaluate_area_overlap(const JoltArea3D &p_area, const JoltSoftBody3D &p_body, const JPH::SubShapeIDPair &p_shape_pair);
 
 	void _flush_contacts();
