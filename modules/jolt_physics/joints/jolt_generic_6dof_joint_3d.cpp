@@ -173,15 +173,12 @@ void JoltGeneric6DOFJoint3D::_update_spring_parameters(int p_axis) {
 
 	JPH::MotorSettings &motor_settings = constraint->GetMotorSettings((JoltAxis)p_axis);
 
-	if (spring_use_frequency[p_axis]) {
-		motor_settings.mSpringSettings.mMode = JPH::ESpringMode::FrequencyAndDamping;
-		motor_settings.mSpringSettings.mFrequency = (float)spring_frequency[p_axis];
-	} else {
-		motor_settings.mSpringSettings.mMode = JPH::ESpringMode::StiffnessAndDamping;
-		motor_settings.mSpringSettings.mStiffness = (float)spring_stiffness[p_axis];
-	}
-
-	motor_settings.mSpringSettings.mDamping = (float)spring_damping[p_axis];
+	// Empirically determined that this is roughly the inverse effective mass value in the fishing-rod scene.
+	// I could have multiplied the values in the godot UI by this value, but I don't want to touch the scene to make it easy to switch back and forth.
+	float inv_effective_mass = 100.0f;
+	motor_settings.mSpringSettings.mMode = JPH::ESpringMode::MassNormalizedStiffnessAndDamping;
+	motor_settings.mSpringSettings.mStiffness = (float)spring_stiffness[p_axis] * inv_effective_mass;
+	motor_settings.mSpringSettings.mDamping = (float)spring_damping[p_axis] * inv_effective_mass;
 }
 
 void JoltGeneric6DOFJoint3D::_update_spring_equilibrium(int p_axis) {
