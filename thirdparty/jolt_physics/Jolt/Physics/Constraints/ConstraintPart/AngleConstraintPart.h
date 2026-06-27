@@ -81,6 +81,7 @@ public:
 	inline void					CalculateConstraintProperties(const Body &inBody1, const Body &inBody2, Vec3Arg inWorldSpaceAxis, float inBias = 0.0f)
 	{
 		float inv_effective_mass = CalculateInverseEffectiveMass(inBody1, inBody2, inWorldSpaceAxis);
+		Trace("b1=%d, b2=%d, inv_effective_mass=%g", inBody1.GetID().GetIndex(), inBody2.GetID().GetIndex(), inv_effective_mass);
 
 		if (inv_effective_mass == 0.0f)
 			Deactivate();
